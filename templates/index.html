@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบวิเคราะห์คะแนนห้องพัก</title>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 ระบบวิเคราะห์คะแนนห้องพัก</h1>
+            <p id="budgetDisplay">งบไม่เกิน 9,000 บาท/เดือน</p>
+        </div>
+        
+        <div class="content">
+            <!-- Import/Export Panel -->
+            <div class="import-export-panel">
+                <h2>📋 นำเข้า/ส่งออกข้อมูล</h2>
+                <div class="import-export-buttons">
+                    <button class="import-btn" onclick="toggleImportArea()">📥 นำเข้าข้อมูลห้อง</button>
+                    <button class="export-btn" onclick="exportAllRooms()">📤 ส่งออกข้อมูลทั้งหมด</button>
+                </div>
+                
+                <div class="import-area" id="importArea">
+                    <p style="margin-bottom: 10px; color: #2e7d32; font-weight: 600;">
+                        วางข้อมูลที่ Copy ไว้ที่นี่:
+                    </p>
+                    <textarea class="import-textarea" id="importTextarea" placeholder='วางข้อมูล JSON ที่คัดลอกไว้ตรงนี้...'></textarea>
+                    <button class="import-submit" onclick="importRoomData()">✅ นำเข้าข้อมูล</button>
+                </div>
+            </div>
+            
+            <!-- Settings Panel -->
+            <div class="settings-panel">
+                <div class="settings-header">
+                    <h2>⚙️ ตั้งค่าระบบ</h2>
+                    <button class="toggle-btn" onclick="toggleSettings()">แสดง/ซ่อน</button>
+                </div>
+                
+                <div class="settings-content" id="settingsContent">
+                    <div class="setting-item">
+                        <label>💰 งบประมาณ (บาท/เดือน)</label>
+                        <input type="number" id="setting_budget" value="9000" onchange="updateSettings()">
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>💧 จำนวนหน่วยน้ำเริ่มต้น</label>
+                        <input type="number" id="setting_water_units" value="10" onchange="updateSettings()">
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>⚡ จำนวนหน่วยไฟเริ่มต้น</label>
+                        <input type="number" id="setting_electric_units" value="100" onchange="updateSettings()">
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>👔 จำนวนครั้งซักผ้าเริ่มต้น</label>
+                        <input type="number" id="setting_laundry_times" value="4" onchange="updateSettings()">
+                    </div>
+                    
+                    <div style="grid-column: 1 / -1; margin-top: 20px;">
+                        <h3 style="color: #667eea; margin-bottom: 10px;">⚖️ น้ำหนักคะแนน (0-10)</h3>
+                        <div class="weights-grid">
+                            <div class="setting-item">
+                                <label>ค่าห้อง</label>
+                                <input type="number" id="weight_price" value="10" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ค่าน้ำ</label>
+                                <input type="number" id="weight_water_cost" value="8" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ค่าไฟ</label>
+                                <input type="number" id="weight_electric_cost" value="8" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ระยะ MRT</label>
+                                <input type="number" id="weight_mrt_distance" value="9" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ความปลอดภัย</label>
+                                <input type="number" id="weight_safety" value="10" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ร้านสะดวกซื้อ</label>
+                                <input type="number" id="weight_convenience" value="9" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ซักผ้า</label>
+                                <input type="number" id="weight_laundry" value="8" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ประเภทห้อง</label>
+                                <input type="number" id="weight_room_type" value="10" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ลิฟท์</label>
+                                <input type="number" id="weight_elevator" value="9" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>อุปกรณ์ไฟฟ้า</label>
+                                <input type="number" id="weight_appliances" value="10" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>น้ำอุ่น</label>
+                                <input type="number" id="weight_water_heater" value="8" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>แอร์</label>
+                                <input type="number" id="weight_aircon" value="9" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ทำอาหาร</label>
+                                <input type="number" id="weight_cooking" value="10" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>พื้นที่ WFH</label>
+                                <input type="number" id="weight_workspace" value="10" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>ขนาดห้อง</label>
+                                <input type="number" id="weight_room_size" value="8" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>รีวิว</label>
+                                <input type="number" id="weight_review" value="7" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>แสงสว่าง</label>
+                                <input type="number" id="weight_lighting" value="3" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                            <div class="setting-item">
+                                <label>สัญญา</label>
+                                <input type="number" id="weight_contract" value="7" min="0" max="10" onchange="updateSettings()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="add-room-btn" onclick="addRoom()">➕ เพิ่มห้องพักใหม่</button>
+            
+            <div class="rooms-container" id="roomsContainer"></div>
+            
+            <div class="comparison" id="comparison" style="display: none;">
+                <h2>📊 เปรียบเทียบห้องพัก (เรียงตามคะแนน)</h2>
+                <div class="comparison-grid" id="comparisonGrid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
