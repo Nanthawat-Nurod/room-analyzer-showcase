@@ -43,6 +43,4 @@ if __name__ == '__main__':
     Timer(1.5, open_browser).start()
     
     # รัน Flask app
-    app.run(debug=False, port=5000)
-    # สำหรับรันเทสในเครื่องตัวเอง
-    # app.run(debug=True)
+    app.run(debug=True, port=5000)
