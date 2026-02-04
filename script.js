@@ -1,3 +1,114 @@
+// 1. ค่าเริ่มต้น (เทียบเท่า DEFAULT_SETTINGS ใน Python)
+const DEFAULT_SETTINGS = {
+    budget: 9000,
+    water_units_default: 10,
+    electric_units_default: 100,
+    laundry_times_default: 4,
+    weights: {
+        price: 10, water_cost: 8, electric_cost: 8, mrt_distance: 9,
+        safety: 10, convenience: 9, laundry: 8, room_type: 10,
+        elevator: 9, appliances: 10, water_heater: 8, aircon: 9,
+        cooking: 10, workspace: 10, room_size: 8, review: 7,
+        lighting: 3, contract: 7
+    }
+};
+
+// 2. ฟังก์ชันคำนวณคะแนนแต่ละเกณฑ์ (เทียบเท่า calculate_score)
+function calculateScore(roomData, weights) {
+    let scores = {};
+    
+    // 1. ราคาห้อง
+    let price = parseFloat(roomData.price || 0);
+    scores['price'] = Math.max(0, (10000 - price) / 1000);
+    
+    // 2. ค่าน้ำ
+    let waterCost = parseFloat(roomData.water_cost || 0);
+    scores['water_cost'] = Math.max(0, (25 - waterCost) / 5);
+    
+    // 3. ค่าไฟ
+    let electricCost = parseFloat(roomData.electric_cost || 0);
+    scores['electric_cost'] = Math.max(0, (10 - electricCost) / 2);
+    
+    // 4. ระยะ MRT
+    let mrtDistance = parseFloat(roomData.mrt_distance || 0);
+    scores['mrt_distance'] = Math.max(0, (1000 - mrtDistance) / 100);
+    
+    // 5. ความปลอดภัย
+    scores['safety'] = parseFloat(roomData.safety || 0);
+    
+    // 6. ร้านสะดวกซื้อ
+    let convenience = parseFloat(roomData.convenience || 0);
+    scores['convenience'] = Math.max(0, (500 - convenience) / 50);
+    
+    // 7. ซักผ้า
+    let laundryCost = parseFloat(roomData.laundry_cost || 0);
+    let laundryDistance = parseFloat(roomData.laundry_distance || 0);
+    scores['laundry'] = Math.max(0, (80 - laundryCost) / 10 + (200 - laundryDistance) / 50);
+    
+    // 8-18. เกณฑ์แบบให้คะแนนโดยตรง
+    const directKeys = ['room_type', 'elevator', 'appliances', 'water_heater', 
+                        'aircon', 'cooking', 'workspace', 'review', 'lighting', 'contract'];
+    directKeys.forEach(key => {
+        scores[key] = parseFloat(roomData[key] || 0);
+    });
+    
+    // 15. ขนาดห้อง
+    let roomSize = parseFloat(roomData.room_size || 0);
+    scores['room_size'] = Math.min(10, roomSize / 3);
+    
+    return scores;
+}
+
+// 3. ฟังก์ชันคำนวณค่าใช้จ่ายรายเดือน (เทียบเท่า calculate_monthly_cost)
+function calculateMonthlyCost(roomData, budget) {
+    let price = parseFloat(roomData.price || 0);
+    
+    let electricCost = parseFloat(roomData.electric_cost || 0);
+    let electricUnits = parseFloat(roomData.electric_units || 0);
+    let electricMonthly = electricCost * electricUnits;
+    
+    let waterCost = parseFloat(roomData.water_cost || 0);
+    let waterUnits = parseFloat(roomData.water_units || 0);
+    let waterMonthly = waterCost * waterUnits;
+    
+    let laundryCost = parseFloat(roomData.laundry_cost || 0);
+    let laundryTimes = parseFloat(roomData.laundry_times || 0);
+    let laundryMonthly = laundryCost * laundryTimes;
+    
+    let internet = parseFloat(roomData.internet || 0);
+    let other = parseFloat(roomData.other_cost || 0);
+    
+    let total = price + electricMonthly + waterMonthly + laundryMonthly + internet + other;
+    
+    return {
+        rent: price,
+        electric: electricMonthly,
+        electric_detail: `${electricUnits.toFixed(0)} หน่วย × ${electricCost.toFixed(1)} บาท`,
+        water: waterMonthly,
+        water_detail: `${waterUnits.toFixed(0)} หน่วย × ${waterCost.toFixed(1)} บาท`,
+        laundry: laundryMonthly,
+        laundry_detail: `${laundryTimes.toFixed(0)} ครั้ง × ${laundryCost.toFixed(1)} บาท`,
+        internet: internet,
+        other: other,
+        total: total,
+        over_budget: Math.max(0, total - budget)
+    };
+}
+
+// 4. ฟังก์ชันคำนวณคะแนนรวมถ่วงน้ำหนัก (เทียบเท่า calculate_weighted_score)
+function calculateWeightedScore(scores, weights) {
+    let totalWeighted = 0;
+    let totalWeight = 0;
+    
+    for (const [key, score] of Object.entries(scores)) {
+        let weight = weights[key] || 0;
+        totalWeighted += score * weight;
+        totalWeight += weight;
+    }
+    
+    return totalWeight > 0 ? (totalWeighted / totalWeight) * 10 : 0;
+}
+
 let roomCount = 0;
         let rooms = {};
         let settings = {
@@ -472,34 +583,34 @@ let roomCount = 0;
         }
         
         function updateRoom(roomId) {
-            const data = {};
-            const fields = ['price', 'water_cost', 'water_units', 'electric_cost', 'electric_units',
-                          'mrt_distance', 'safety', 'convenience', 'laundry_cost', 'laundry_times',
-                          'laundry_distance', 'room_type', 'elevator', 'appliances', 'water_heater',
-                          'aircon', 'cooking', 'workspace', 'room_size', 'review', 'lighting',
-                          'contract', 'internet', 'other_cost'];
-            
-            fields.forEach(field => {
-                const element = document.getElementById(`${roomId}_${field}`);
-                data[field] = element ? (element.value || 0) : 0;
-            });
-            
-            rooms[roomId].data = data;
-            
-            fetch('/calculate', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    room_data: data,
-                    settings: settings
-                })
-            })
-            .then(response => response.json())
-            .then(result => {
-                displayResults(roomId, result);
-                updateComparison();
-            });
-        }
+        const data = {};
+        const fields = ['price', 'water_cost', 'water_units', 'electric_cost', 'electric_units',
+                    'mrt_distance', 'safety', 'convenience', 'laundry_cost', 'laundry_times',
+                    'laundry_distance', 'room_type', 'elevator', 'appliances', 'water_heater',
+                    'aircon', 'cooking', 'workspace', 'room_size', 'review', 'lighting',
+                    'contract', 'internet', 'other_cost'];
+        
+        fields.forEach(field => {
+            const element = document.getElementById(`${roomId}_${field}`);
+            data[field] = element ? (element.value || 0) : 0;
+        });
+        
+        rooms[roomId].data = data;
+
+        // --- ส่วนที่เปลี่ยน: ไม่ใช้ fetch แล้ว แต่คำนวณสดๆ ตรงนี้เลย ---
+        const scores = calculateScore(data, settings.weights);
+        const totalScore = calculateWeightedScore(scores, settings.weights);
+        const monthlyCost = calculateMonthlyCost(data, settings.budget);
+        
+        const result = {
+            scores: scores,
+            total_score: totalScore,
+            monthly_cost: monthlyCost
+        };
+
+        displayResults(roomId, result);
+        updateComparison();
+    }
         
         function displayResults(roomId, result) {
             const resultsDiv = document.getElementById(`${roomId}_results`);
@@ -561,72 +672,61 @@ let roomCount = 0;
         }
         
         function updateComparison() {
-            const roomList = Object.keys(rooms);
-            if (roomList.length === 0) {
-                document.getElementById('comparison').style.display = 'none';
-                return;
-            }
-            
-            // เรียงตามคะแนน
-            const sorted = [];
-            const promises = [];
-            
-            roomList.forEach(roomId => {
-                const data = rooms[roomId].data;
-                if (data.price) {  // มีข้อมูล
-                    const promise = fetch('/calculate', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            room_data: data,
-                            settings: settings
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(result => {
-                        return {
-                            id: roomId,
-                            name: rooms[roomId].name,
-                            score: result.total_score,
-                            cost: result.monthly_cost.total,
-                            over_budget: result.monthly_cost.over_budget
-                        };
-                    });
-                    promises.push(promise);
-                }
-            });
-            
-            Promise.all(promises).then(results => {
-                results.sort((a, b) => b.score - a.score);
-                
-                const grid = document.getElementById('comparisonGrid');
-                grid.innerHTML = '';
-                
-                results.forEach((room, index) => {
-                    const rankClass = index === 0 ? 'first' : index === 1 ? 'second' : index === 2 ? 'third' : '';
-                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
-                    
-                    grid.innerHTML += `
-                        <div class="rank-card ${rankClass}">
-                            <div class="rank-number">${medal} อันดับ ${index + 1}</div>
-                            <div class="rank-name">${room.name}</div>
-                            <div class="rank-score">${room.score.toFixed(2)} คะแนน</div>
-                            <div style="margin-top: 10px; font-size: 0.95em;">
-                                <div>💰 ${room.cost.toLocaleString()} บาท/เดือน</div>
-                                ${room.over_budget > 0 ? 
-                                    `<div style="color: #c62828;">⚠️ เกินงบ ${room.over_budget.toLocaleString()} บาท</div>` :
-                                    `<div style="color: #2e7d32;">✅ อยู่ในงบ</div>`
-                                }
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                if (results.length > 0) {
-                    document.getElementById('comparison').style.display = 'block';
-                }
-            });
+        const roomList = Object.keys(rooms);
+        if (roomList.length === 0) {
+            document.getElementById('comparison').style.display = 'none';
+            return;
         }
+        
+        // คำนวณคะแนนสดๆ ใน JS สำหรับทุกห้อง
+        const results = [];
+        roomList.forEach(roomId => {
+            const data = rooms[roomId].data;
+            if (data && data.price) {  
+                const scores = calculateScore(data, settings.weights);
+                const totalScore = calculateWeightedScore(scores, settings.weights);
+                const monthlyCost = calculateMonthlyCost(data, settings.budget);
+                
+                results.push({
+                    id: roomId,
+                    name: rooms[roomId].name,
+                    score: totalScore,
+                    cost: monthlyCost.total,
+                    over_budget: monthlyCost.over_budget
+                });
+            }
+        });
+
+        // เรียงอันดับคะแนนจากมากไปน้อย
+        results.sort((a, b) => b.score - a.score);
+        
+        const grid = document.getElementById('comparisonGrid');
+        grid.innerHTML = '';
+        
+        results.forEach((room, index) => {
+            const rankClass = index === 0 ? 'first' : index === 1 ? 'second' : index === 2 ? 'third' : '';
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+            
+            grid.innerHTML += `
+                <div class="rank-card ${rankClass}">
+                    <div class="rank-number">${medal} อันดับ ${index + 1}</div>
+                    <div class="rank-name">${room.name}</div>
+                    <div class="rank-score">${room.score.toFixed(2)} คะแนน</div>
+                    <div style="margin-top: 10px; font-size: 0.95em;">
+                        <div>💰 ${room.cost.toLocaleString()} บาท/เดือน</div>
+                        ${room.over_budget > 0 ? 
+                            `<div style="color: #c62828;">⚠️ เกินงบ ${room.over_budget.toLocaleString()} บาท</div>` :
+                            `<div style="color: #2e7d32;">✅ อยู่ในงบ</div>`
+                        }
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (results.length > 0) {
+            document.getElementById('comparison').style.display = 'block';
+        }
+    }
         
         // เพิ่มห้องตัวอย่างตอนเริ่มต้น
         addRoom();
